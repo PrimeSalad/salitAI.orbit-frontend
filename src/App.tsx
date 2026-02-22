@@ -1,9 +1,12 @@
 /**
  * SalitAI.orbit Frontend
  * File: app.tsx
- * Version: 1.0.9
- * Purpose: Full React UI + ElevenLabs STT + Gemini Minutes + Export + Contact submit + Built-in prompt presets
+ * Version: 1.1.0
+ * Purpose: Full React UI + STT (Backend /api/stt) + Gemini Minutes + Export + Contact submit + Built-in prompt presets
  *          + Rotating About quotes + Smooth animated navigation scrolling.
+ * Notes:
+ * - Backend STT provider can be Deepgram/Whisper/ElevenLabs; frontend uses /api/stt only.
+ * - Mobile view improved: responsive heights, spacing, stacking, and overflow handling.
  */
 
 import React from "react";
@@ -154,8 +157,6 @@ const ABOUT_QUOTES: AboutQuote[] = [
 
 /**
  * NAV SMOOTH SCROLL CONFIG
- * - No sizing changes
- * - Adds animated smooth scrolling + subtle "pulse" highlight on target section
  */
 const SCROLL_DURATION_MS = 650;
 const SECTION_PULSE_CLASS = "section-pulse-once";
@@ -165,7 +166,7 @@ const SECTION_PULSE_CLASS = "section-pulse-once";
  * so React can attach click handlers for animated scroll.
  */
 const ORIGINAL_HEADER_HTML =
-  '<header class="fixed top-0 left-0 right-0 z-[100] border-b border-white/5 bg-black/20 backdrop-blur-xl">\n<div class="mx-auto max-w-6xl px-6 lg:px-10">\n<div class="flex h-20 items-center justify-between">\n<a class="text-xl font-bold tracking-tighter" href="#home" data-nav="#home">\n<span class="text-white">salit</span><span class="brand-gradient">AI.orbit</span>\n</a>\n<nav class="hidden md:flex items-center gap-10 text-[10px] tracking-[0.3em] text-white/50">\n<a class="hover:text-white transition uppercase" href="#home" data-nav="#home">Home</a>\n<a class="hover:text-white transition uppercase" href="#try" data-nav="#try">Platform</a>\n<a class="hover:text-white transition uppercase" href="#about" data-nav="#about">About</a>\n<a class="hover:text-white transition uppercase" href="#contact" data-nav="#contact">Contact</a>\n</nav>\n<button class="md:hidden p-2 text-white/70" id="menu_btn">\n<svg class="w-6 h-6" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M4 8h16M4 16h16" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></path></svg>\n</button>\n</div>\n<div class="hidden md:hidden absolute left-0 w-full bg-black/70 backdrop-blur-2xl border-b border-white/10 shadow-[0_20px_50px_-10px_rgba(0,0,0,0.8)] z-50" id="mobile_menu">\n<div class="flex flex-col p-4 space-y-2">\n<a class="group relative flex items-center justify-center w-full py-4 overflow-hidden rounded-xl transition-all duration-300 hover:bg-white/5 active:scale-95" href="#home" data-nav="#home">\n<div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 ease-in-out"></div>\n<span class="relative z-10 text-xs font-bold tracking-[0.25em] text-white/50 group-hover:text-white group-hover:drop-shadow-[0_0_12px_rgba(255,255,255,0.6)] transition-all duration-300">HOME</span>\n</a>\n<a class="group relative flex items-center justify-center w-full py-4 overflow-hidden rounded-xl transition-all duration-300 hover:bg-white/5 active:scale-95" href="#try" data-nav="#try">\n<div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 ease-in-out"></div>\n<span class="relative z-10 text-xs font-bold tracking-[0.25em] text-white/50 group-hover:text-white group-hover:drop-shadow-[0_0_12px_rgba(255,255,255,0.6)] transition-all duration-300">PLATFORM</span>\n</a>\n<a class="group relative flex items-center justify-center w-full py-4 overflow-hidden rounded-xl transition-all duration-300 hover:bg-white/5 active:scale-95" href="#about" data-nav="#about">\n<div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent translate-x=\\\"[-100%]\\\" group-hover:translate-x-[100%] transition-transform duration-700 ease-in-out"></div>\n<span class="relative z-10 text-xs font-bold tracking-[0.25em] text-white/50 group-hover:text-white group-hover:drop-shadow-[0_0_12px_rgba(255,255,255,0.6)] transition-all duration-300">ABOUT</span>\n</a>\n<a class="group relative flex items-center justify-center w-full py-4 overflow-hidden rounded-xl transition-all duration-300 hover:bg-white/5 active:scale-95" href="#contact" data-nav="#contact">\n<div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent translate-x=\\\"[-100%]\\\" group-hover:translate-x-[100%] transition-transform duration-700 ease-in-out"></div>\n<span class="relative z-10 text-xs font-bold tracking-[0.25em] text-white/50 group-hover:text-white group-hover:drop-shadow-[0_0_12px_rgba(255,255,255,0.6)] transition-all duration-300">CONTACT</span>\n</a>\n</div>\n</div>\n</div>\n</header>';
+  '<header class="fixed top-0 left-0 right-0 z-[100] border-b border-white/5 bg-black/20 backdrop-blur-xl">\n<div class="mx-auto max-w-6xl px-6 lg:px-10">\n<div class="flex h-20 items-center justify-between">\n<a class="text-xl font-bold tracking-tighter" href="#home" data-nav="#home">\n<span class="text-white">salit</span><span class="brand-gradient">AI.orbit</span>\n</a>\n<nav class="hidden md:flex items-center gap-10 text-[10px] tracking-[0.3em] text-white/50">\n<a class="hover:text-white transition uppercase" href="#home" data-nav="#home">Home</a>\n<a class="hover:text-white transition uppercase" href="#try" data-nav="#try">Platform</a>\n<a class="hover:text-white transition uppercase" href="#about" data-nav="#about">About</a>\n<a class="hover:text-white transition uppercase" href="#contact" data-nav="#contact">Contact</a>\n</nav>\n<button class="md:hidden p-2 text-white/70" id="menu_btn">\n<svg class="w-6 h-6" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M4 8h16M4 16h16" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></path></svg>\n</button>\n</div>\n<div class="hidden md:hidden absolute left-0 w-full bg-black/70 backdrop-blur-2xl border-b border-white/10 shadow-[0_20px_50px_-10px_rgba(0,0,0,0.8)] z-50" id="mobile_menu">\n<div class="flex flex-col p-4 space-y-2">\n<a class="group relative flex items-center justify-center w-full py-4 overflow-hidden rounded-xl transition-all duration-300 hover:bg-white/5 active:scale-95" href="#home" data-nav="#home">\n<div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 ease-in-out"></div>\n<span class="relative z-10 text-xs font-bold tracking-[0.25em] text-white/50 group-hover:text-white group-hover:drop-shadow-[0_0_12px_rgba(255,255,255,0.6)] transition-all duration-300">HOME</span>\n</a>\n<a class="group relative flex items-center justify-center w-full py-4 overflow-hidden rounded-xl transition-all duration-300 hover:bg-white/5 active:scale-95" href="#try" data-nav="#try">\n<div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 ease-in-out"></div>\n<span class="relative z-10 text-xs font-bold tracking-[0.25em] text-white/50 group-hover:text-white group-hover:drop-shadow-[0_0_12px_rgba(255,255,255,0.6)] transition-all duration-300">PLATFORM</span>\n</a>\n<a class="group relative flex items-center justify-center w-full py-4 overflow-hidden rounded-xl transition-all duration-300 hover:bg-white/5 active:scale-95" href="#about" data-nav="#about">\n<div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 ease-in-out"></div>\n<span class="relative z-10 text-xs font-bold tracking-[0.25em] text-white/50 group-hover:text-white group-hover:drop-shadow-[0_0_12px_rgba(255,255,255,0.6)] transition-all duration-300">ABOUT</span>\n</a>\n<a class="group relative flex items-center justify-center w-full py-4 overflow-hidden rounded-xl transition-all duration-300 hover:bg-white/5 active:scale-95" href="#contact" data-nav="#contact">\n<div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 ease-in-out"></div>\n<span class="relative z-10 text-xs font-bold tracking-[0.25em] text-white/50 group-hover:text-white group-hover:drop-shadow-[0_0_12px_rgba(255,255,255,0.6)] transition-all duration-300">CONTACT</span>\n</a>\n</div>\n</div>\n</div>\n</header>';
 
 const ORIGINAL_HOME_HTML =
   '<section class="relative min-h-screen flex items-center overflow-hidden pt-24 lg:pt-0" id="home">\n\
@@ -210,7 +211,7 @@ const ORIGINAL_HOME_HTML =
 </section>';
 
 const ORIGINAL_ENGINE_STRIP_HTML =
-  '<div class="py-20 border-y border-white/5 bg-[#030408] relative overflow-hidden group">\n<div class="absolute inset-0 pointer-events-none">\n<div class="absolute inset-y-0 w-[150px] bg-gradient-to-r from-transparent via-blue-500/10 to-transparent -skew-x-12 animate-[scan_6s_linear_infinite]"></div>\n</div>\n<div class="max-w-6xl mx-auto px-6 relative z-10">\n<p class="text-[9px] font-bold tracking-[0.6em] text-center text-white/20 uppercase mb-12 shimmer">\n            Engineered with High-Fidelity Intelligence\n        </p>\n<div class="flex flex-wrap justify-center items-center gap-8 lg:gap-16">\n<div class="group/item flex items-center gap-3 transition-all duration-500">\n<div class="relative">\n<div class="absolute inset-0 bg-blue-400/20 blur-md rounded-full scale-0 group-hover/item:scale-150 transition-transform duration-500"></div>\n<svg class="w-6 h-6 text-blue-400 relative z-10" fill="currentColor" viewbox="0 0 24 24">\n<path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z"></path>\n</svg>\n</div>\n<div class="flex flex-col">\n<span class="text-[11px] font-bold text-white/80 tracking-tighter group-hover/item:text-blue-400 transition-colors">Gemini 1.5 Pro</span>\n<div class="flex items-center gap-1.5">\n<span class="w-1 h-1 bg-blue-500 rounded-full animate-pulse"></span>\n<span class="text-[8px] text-white/20 font-mono uppercase tracking-widest">Logic_Core</span>\n</div>\n</div>\n</div>\n<div class="group/item flex items-center gap-3 transition-all duration-500">\n<div class="relative">\n<div class="absolute inset-0 bg-purple-400/20 blur-md rounded-full scale-0 group-hover/item:scale-150 transition-transform duration-500"></div>\n<svg class="w-6 h-6 text-purple-400 relative z-10" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">\n<path d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" stroke-linecap="round" stroke-linejoin="round"></path>\n</svg>\n</div>\n<div class="flex flex-col">\n<span class="text-[11px] font-bold text-white/80 tracking-tighter group-hover/item:text-purple-400 transition-colors">ElevenLabs</span>\n<div class="flex items-center gap-1.5">\n<span class="w-1 h-1 bg-purple-500 rounded-full animate-pulse"></span>\n<span class="text-[8px] text-white/20 font-mono uppercase tracking-widest">Voice_Synth</span>\n</div>\n</div>\n</div>\n<div class="group/item flex items-center gap-3 transition-all duration-500">\n<div class="relative">\n<div class="absolute inset-0 bg-cyan-400/20 blur-md rounded-full scale-0 group-hover/item:scale-150 transition-transform duration-500"></div>\n<svg class="w-6 h-6 text-cyan-400 relative z-10 animate-[spin_8s_linear_infinite]" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">\n<circle cx="12" cy="12" fill="currentColor" r="2"></circle>\n<ellipse cx="12" cy="12" rx="10" ry="4"></ellipse>\n<ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(60 12 12)"></ellipse>\n<ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(120 12 12)"></ellipse>\n</svg>\n</div>\n<div class="flex flex-col">\n<span class="text-[11px] font-bold text-white/80 tracking-tighter group-hover/item:text-cyan-400 transition-colors">React v18</span>\n<div class="flex items-center gap-1.5">\n<span class="w-1 h-1 bg-cyan-500 rounded-full animate-pulse"></span>\n<span class="text-[8px] text-white/20 font-mono uppercase tracking-widest">Interface_Lib</span>\n</div>\n</div>\n</div>\n</div>\n</div>\n</div>\n</div>\n</div>';
+  '<div class="py-20 border-y border-white/5 bg-[#030408] relative overflow-hidden group">\n<div class="absolute inset-0 pointer-events-none">\n<div class="absolute inset-y-0 w-[150px] bg-gradient-to-r from-transparent via-blue-500/10 to-transparent -skew-x-12 animate-[scan_6s_linear_infinite]"></div>\n</div>\n<div class="max-w-6xl mx-auto px-6 relative z-10">\n<p class="text-[9px] font-bold tracking-[0.6em] text-center text-white/20 uppercase mb-12 shimmer">\n            Engineered with High-Fidelity Intelligence\n        </p>\n<div class="flex flex-wrap justify-center items-center gap-8 lg:gap-16">\n<div class="group/item flex items-center gap-3 transition-all duration-500">\n<div class="relative">\n<div class="absolute inset-0 bg-blue-400/20 blur-md rounded-full scale-0 group-hover/item:scale-150 transition-transform duration-500"></div>\n<svg class="w-6 h-6 text-blue-400 relative z-10" fill="currentColor" viewbox="0 0 24 24">\n<path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z"></path>\n</svg>\n</div>\n<div class="flex flex-col">\n<span class="text-[11px] font-bold text-white/80 tracking-tighter group-hover/item:text-blue-400 transition-colors">Gemini 1.5 Pro</span>\n<div class="flex items-center gap-1.5">\n<span class="w-1 h-1 bg-blue-500 rounded-full animate-pulse"></span>\n<span class="text-[8px] text-white/20 font-mono uppercase tracking-widest">Logic_Core</span>\n</div>\n</div>\n</div>\n<div class="group/item flex items-center gap-3 transition-all duration-500">\n<div class="relative">\n<div class="absolute inset-0 bg-purple-400/20 blur-md rounded-full scale-0 group-hover/item:scale-150 transition-transform duration-500"></div>\n<svg class="w-6 h-6 text-purple-400 relative z-10" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">\n<path d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" stroke-linecap="round" stroke-linejoin="round"></path>\n</svg>\n</div>\n<div class="flex flex-col">\n<span class="text-[11px] font-bold text-white/80 tracking-tighter group-hover/item:text-purple-400 transition-colors">Deepgram</span>\n<div class="flex items-center gap-1.5">\n<span class="w-1 h-1 bg-purple-500 rounded-full animate-pulse"></span>\n<span class="text-[8px] text-white/20 font-mono uppercase tracking-widest">Voice_Synth</span>\n</div>\n</div>\n</div>\n<div class="group/item flex items-center gap-3 transition-all duration-500">\n<div class="relative">\n<div class="absolute inset-0 bg-cyan-400/20 blur-md rounded-full scale-0 group-hover/item:scale-150 transition-transform duration-500"></div>\n<svg class="w-6 h-6 text-cyan-400 relative z-10 animate-[spin_8s_linear_infinite]" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">\n<circle cx="12" cy="12" fill="currentColor" r="2"></circle>\n<ellipse cx="12" cy="12" rx="10" ry="4"></ellipse>\n<ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(60 12 12)"></ellipse>\n<ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(120 12 12)"></ellipse>\n</svg>\n</div>\n<div class="flex flex-col">\n<span class="text-[11px] font-bold text-white/80 tracking-tighter group-hover/item:text-cyan-400 transition-colors">React v18</span>\n<div class="flex items-center gap-1.5">\n<span class="w-1 h-1 bg-cyan-500 rounded-full animate-pulse"></span>\n<span class="text-[8px] text-white/20 font-mono uppercase tracking-widest">Interface_Lib</span>\n</div>\n</div>\n</div>\n</div>\n</div>\n</div>\n</div>\n</div>\n</div>';
 
 /**
  * NOTE: Sizing/classes unchanged — only IDs were added so React can rotate quote text.
@@ -296,6 +297,10 @@ const ORIGINAL_ABOUT_HTML = `<section class="py-32 border-t border-white/5 max-w
 const ORIGINAL_FOOTER_HTML =
   '<footer class="py-16 border-t border-white/5 text-center text-[10px] tracking-[1em] text-white/3 uppercase">\n            © <span id="year"></span> salitAI.orbit • Engineered by DotOrbit\n        </footer>';
 
+/* ============================= */
+/* NAV / SCROLL HELPERS          */
+/* ============================= */
+
 function ease_in_out_cubic(t: number): number {
   return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 }
@@ -344,9 +349,7 @@ function animated_scroll_to(targetY: number, durationMs: number): void {
 }
 
 function pulse_section_once(section: HTMLElement): void {
-  // Re-trigger animation
   section.classList.remove(SECTION_PULSE_CLASS);
-  // Force reflow
   // eslint-disable-next-line @typescript-eslint/no-unused-expressions
   section.offsetWidth;
   section.classList.add(SECTION_PULSE_CLASS);
@@ -363,6 +366,10 @@ function close_mobile_menu_if_open(): void {
   if (!menu) return;
   if (!menu.classList.contains("hidden")) menu.classList.add("hidden");
 }
+
+/* ============================= */
+/* APP                           */
+/* ============================= */
 
 export default function App(): JSX.Element {
   const [busy, setBusy] = React.useState<Busy>("idle");
@@ -412,6 +419,12 @@ export default function App(): JSX.Element {
         animation: section_pulse_once 1.05s ease-out 1;
         border-radius: inherit;
       }
+
+      /* Mobile stability helpers (no global layout breaking) */
+      .safe-tap {
+        -webkit-tap-highlight-color: transparent;
+        touch-action: manipulation;
+      }
     `;
     document.head.appendChild(style);
   }, []);
@@ -431,7 +444,7 @@ export default function App(): JSX.Element {
     if (year) year.textContent = String(new Date().getFullYear());
   }, []);
 
-  // Animated nav scroll (desktop + mobile + hero CTA) via data-nav
+  // Animated nav scroll via data-nav
   React.useEffect(() => {
     const handler = (e: MouseEvent) => {
       const t = e.target as HTMLElement | null;
@@ -462,7 +475,7 @@ export default function App(): JSX.Element {
     return () => document.removeEventListener("click", handler);
   }, []);
 
-  // Rotate About quote (3 authors). No sizing/style changes; just swapping text.
+  // Rotate About quote
   React.useEffect(() => {
     const quoteEl = document.getElementById("about_quote_text");
     const initialsEl = document.getElementById("about_quote_initials");
@@ -483,12 +496,12 @@ export default function App(): JSX.Element {
     apply(ABOUT_QUOTES[idx]);
 
     const intervalMs = 8000;
-    const t = window.setInterval(() => {
+    const timer = window.setInterval(() => {
       idx = (idx + 1) % ABOUT_QUOTES.length;
       apply(ABOUT_QUOTES[idx]);
     }, intervalMs);
 
-    return () => window.clearInterval(t);
+    return () => window.clearInterval(timer);
   }, []);
 
   // Auto-apply preset to fields when changed
@@ -687,15 +700,22 @@ export default function App(): JSX.Element {
       <main>
         <div dangerouslySetInnerHTML={{ __html: ORIGINAL_HOME_HTML }} />
 
+        {/* PLATFORM */}
         <section
-          className="py-32 border-t border-white/5 max-w-7xl mx-auto px-6 relative"
+          className="py-20 sm:py-28 lg:py-32 border-t border-white/5 max-w-7xl mx-auto px-4 sm:px-6 relative"
           id="try"
         >
-          <div className="grid lg:grid-cols-12 gap-8 lg:gap-12">
+          <div className="grid lg:grid-cols-12 gap-6 sm:gap-8 lg:gap-12">
             {/* TOP LEFT: Transcript panel */}
             <div className="lg:col-span-6">
-              <div className="glass-card h-[760px] max-h-[760px] flex flex-col overflow-hidden border border-white/10 bg-[#05060b]/60 backdrop-blur-2xl rounded-[2.5rem] shadow-2xl relative">
-                <div className="flex items-center justify-between px-8 py-5 border-b border-white/5 bg-white/[0.02]">
+              <div
+                className={class_names(
+                  "glass-card flex flex-col overflow-hidden border border-white/10 bg-[#05060b]/60 backdrop-blur-2xl rounded-[2.5rem] shadow-2xl relative",
+                  // Mobile: flexible height; Desktop: fixed 760
+                  "min-h-[560px] sm:min-h-[640px] lg:h-[760px] lg:max-h-[760px]",
+                )}
+              >
+                <div className="flex items-center justify-between px-6 sm:px-8 py-5 border-b border-white/5 bg-white/[0.02]">
                   <div className="flex gap-1.5">
                     <div className="w-2 h-2 rounded-full bg-red-500/20" />
                     <div className="w-2 h-2 rounded-full bg-yellow-500/20" />
@@ -707,28 +727,29 @@ export default function App(): JSX.Element {
                   </span>
 
                   <button
-                    className="text-white/20 hover:text-red-400 transition-colors p-1"
+                    className="safe-tap text-white/20 hover:text-red-400 transition-colors p-2 -m-1 rounded-lg"
                     onClick={() => {
                       setTranscript("");
                       setGeneratedMd("");
                     }}
                     title="Clear"
+                    type="button"
                   >
                     ✕
                   </button>
                 </div>
 
                 <textarea
-                  className="min-h-0 flex-1 p-10 bg-transparent text-[15px] font-medium leading-relaxed outline-none resize-none overflow-y-auto custom-scrollbar text-white/70"
+                  className="min-h-0 flex-1 p-6 sm:p-10 bg-transparent text-[14px] sm:text-[15px] font-medium leading-relaxed outline-none resize-none overflow-y-auto custom-scrollbar text-white/70"
                   placeholder="// Start speaking or drop a file to begin..."
                   value={transcript}
                   onChange={(e) => setTranscript(e.target.value)}
                 />
 
-                <div className="p-6 bg-white/[0.01] border-t border-white/5 grid grid-cols-2 gap-4">
+                <div className="p-4 sm:p-6 bg-white/[0.01] border-t border-white/5 grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <button
                     className={class_names(
-                      "relative overflow-hidden py-5 rounded-2xl text-white font-bold text-[10px] tracking-[0.2em] transition-all flex items-center justify-center gap-3 group shadow-[0_10px_30px_rgba(37,99,235,0.2)]",
+                      "safe-tap relative overflow-hidden py-4 sm:py-5 rounded-2xl text-white font-bold text-[10px] tracking-[0.2em] transition-all flex items-center justify-center gap-3 group shadow-[0_10px_30px_rgba(37,99,235,0.2)]",
                       busy === "recording"
                         ? "bg-red-600 hover:bg-red-500"
                         : "bg-blue-600 hover:bg-blue-500",
@@ -738,6 +759,7 @@ export default function App(): JSX.Element {
                       else void start_recording();
                     }}
                     disabled={busy !== "idle" && busy !== "recording"}
+                    type="button"
                   >
                     <div className="w-2 h-2 bg-white rounded-full group-hover:animate-ping" />
                     {busy === "recording"
@@ -746,7 +768,7 @@ export default function App(): JSX.Element {
                   </button>
 
                   <button
-                    className="py-5 rounded-2xl bg-white/[0.03] border border-white/10 hover:bg-white/10 hover:border-white/20 text-white/50 hover:text-white font-bold text-[10px] tracking-[0.2em] transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+                    className="safe-tap py-4 sm:py-5 rounded-2xl bg-white/[0.03] border border-white/10 hover:bg-white/10 hover:border-white/20 text-white/50 hover:text-white font-bold text-[10px] tracking-[0.2em] transition-all flex items-center justify-center gap-3 disabled:opacity-50"
                     onClick={() =>
                       (
                         document.getElementById(
@@ -755,6 +777,7 @@ export default function App(): JSX.Element {
                       )?.click()
                     }
                     disabled={busy !== "idle"}
+                    type="button"
                   >
                     UPLOAD AUDIO
                   </button>
@@ -778,9 +801,15 @@ export default function App(): JSX.Element {
 
             {/* TOP RIGHT: Config panel */}
             <div className="lg:col-span-6">
-              <div className="glass-card h-[760px] max-h-[760px] p-10 md:p-14 border border-white/10 bg-[#05060b]/40 backdrop-blur-2xl rounded-[2.5rem] relative overflow-hidden flex flex-col shadow-2xl">
-                <div className="mb-10">
-                  <h3 className="text-4xl font-bold tracking-tight text-white">
+              <div
+                className={class_names(
+                  "glass-card border border-white/10 bg-[#05060b]/40 backdrop-blur-2xl rounded-[2.5rem] relative overflow-hidden flex flex-col shadow-2xl",
+                  "p-6 sm:p-10 md:p-14",
+                  "min-h-[560px] sm:min-h-[640px] lg:h-[760px] lg:max-h-[760px]",
+                )}
+              >
+                <div className="mb-8 sm:mb-10">
+                  <h3 className="text-3xl sm:text-4xl font-bold tracking-tight text-white">
                     Logic Architect
                   </h3>
                   <p className="text-sm text-white/30 mt-3 leading-relaxed max-w-sm">
@@ -790,14 +819,14 @@ export default function App(): JSX.Element {
                 </div>
 
                 {/* Built-in prompt preset */}
-                <div className="grid sm:grid-cols-2 gap-8 mb-10">
-                  <div className="space-y-4">
+                <div className="grid sm:grid-cols-2 gap-6 sm:gap-8 mb-8 sm:mb-10">
+                  <div className="space-y-3 sm:space-y-4">
                     <label className="text-[10px] font-bold tracking-[0.2em] text-white/30 uppercase ml-1">
                       Built-in Prompt
                     </label>
                     <div className="relative">
                       <select
-                        className="w-full bg-white/[0.03] border border-white/10 rounded-2xl py-5 px-6 text-sm text-white/70 outline-none focus:border-cyan-500/50 focus:bg-cyan-500/5 transition-all appearance-none cursor-pointer"
+                        className="w-full bg-white/[0.03] border border-white/10 rounded-2xl py-4 sm:py-5 px-5 sm:px-6 text-sm text-white/70 outline-none focus:border-cyan-500/50 focus:bg-cyan-500/5 transition-all appearance-none cursor-pointer safe-tap"
                         value={preset_id}
                         onChange={(e) => setPresetId(e.target.value)}
                       >
@@ -811,18 +840,18 @@ export default function App(): JSX.Element {
                           </option>
                         ))}
                       </select>
-                      <div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none text-white/20">
+                      <div className="absolute right-5 sm:right-6 top-1/2 -translate-y-1/2 pointer-events-none text-white/20">
                         ⌄
                       </div>
                     </div>
                   </div>
 
-                  <div className="space-y-4">
+                  <div className="space-y-3 sm:space-y-4">
                     <label className="text-[10px] font-bold tracking-[0.2em] text-white/30 uppercase ml-1">
                       Extra Notes (optional)
                     </label>
                     <input
-                      className="w-full bg-white/[0.03] border border-white/10 rounded-2xl py-5 px-6 text-sm text-white/70 outline-none focus:border-cyan-500/50 focus:bg-cyan-500/5 transition-all placeholder:text-white/10"
+                      className="w-full bg-white/[0.03] border border-white/10 rounded-2xl py-4 sm:py-5 px-5 sm:px-6 text-sm text-white/70 outline-none focus:border-cyan-500/50 focus:bg-cyan-500/5 transition-all placeholder:text-white/10 safe-tap"
                       placeholder="e.g. Focus only on budget + timeline"
                       type="text"
                       value={extra_notes}
@@ -832,14 +861,14 @@ export default function App(): JSX.Element {
                 </div>
 
                 {/* Existing fields */}
-                <div className="grid sm:grid-cols-2 gap-8 mb-10">
-                  <div className="space-y-4">
+                <div className="grid sm:grid-cols-2 gap-6 sm:gap-8 mb-8 sm:mb-10">
+                  <div className="space-y-3 sm:space-y-4">
                     <label className="text-[10px] font-bold tracking-[0.2em] text-white/30 uppercase ml-1">
                       Document Type
                     </label>
                     <div className="relative">
                       <select
-                        className="w-full bg-white/[0.03] border border-white/10 rounded-2xl py-5 px-6 text-sm text-white/70 outline-none focus:border-blue-500/50 focus:bg-blue-500/5 transition-all appearance-none cursor-pointer"
+                        className="w-full bg-white/[0.03] border border-white/10 rounded-2xl py-4 sm:py-5 px-5 sm:px-6 text-sm text-white/70 outline-none focus:border-blue-500/50 focus:bg-blue-500/5 transition-all appearance-none cursor-pointer safe-tap"
                         value={document_type}
                         onChange={(e) => setDocumentType(e.target.value)}
                       >
@@ -856,18 +885,18 @@ export default function App(): JSX.Element {
                           Step-by-Step Guide
                         </option>
                       </select>
-                      <div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none text-white/20">
+                      <div className="absolute right-5 sm:right-6 top-1/2 -translate-y-1/2 pointer-events-none text-white/20">
                         ⌄
                       </div>
                     </div>
                   </div>
 
-                  <div className="space-y-4">
+                  <div className="space-y-3 sm:space-y-4">
                     <label className="text-[10px] font-bold tracking-[0.2em] text-white/30 uppercase ml-1">
                       Response Style
                     </label>
                     <input
-                      className="w-full bg-white/[0.03] border border-white/10 rounded-2xl py-5 px-6 text-sm text-white/70 outline-none focus:border-purple-500/50 focus:bg-purple-500/5 transition-all placeholder:text-white/10"
+                      className="w-full bg-white/[0.03] border border-white/10 rounded-2xl py-4 sm:py-5 px-5 sm:px-6 text-sm text-white/70 outline-none focus:border-purple-500/50 focus:bg-purple-500/5 transition-all placeholder:text-white/10 safe-tap"
                       placeholder="e.g. Concise & Technical"
                       type="text"
                       value={response_style}
@@ -876,7 +905,7 @@ export default function App(): JSX.Element {
                   </div>
                 </div>
 
-                <div className="space-y-4 mb-8 flex-1 min-h-0 flex flex-col">
+                <div className="space-y-3 sm:space-y-4 mb-6 sm:mb-8 flex-1 min-h-0 flex flex-col">
                   <div className="flex items-center justify-between px-1">
                     <label className="text-[10px] font-bold tracking-[0.2em] text-white/30 uppercase">
                       Special Directives (Template)
@@ -887,7 +916,7 @@ export default function App(): JSX.Element {
                   </div>
 
                   <textarea
-                    className="min-h-0 flex-1 w-full bg-[#030408]/80 rounded-[2rem] p-8 text-sm text-white outline-none focus:bg-[#030408]/95 transition-all resize-none leading-relaxed placeholder:text-white/2 overflow-y-auto custom-scrollbar"
+                    className="min-h-0 flex-1 w-full bg-[#030408]/80 rounded-[2rem] p-6 sm:p-8 text-sm text-white outline-none focus:bg-[#030408]/95 transition-all resize-none leading-relaxed placeholder:text-white/2 overflow-y-auto custom-scrollbar safe-tap"
                     placeholder="Preset template will appear here. You can edit it."
                     value={directives}
                     onChange={(e) => setDirectives(e.target.value)}
@@ -895,9 +924,10 @@ export default function App(): JSX.Element {
                 </div>
 
                 <button
-                  className="w-full group relative py-6 rounded-2xl bg-white text-black font-bold tracking-[0.4em] text-[11px] overflow-hidden transition-all hover:scale-[1.01] active:scale-[0.98] disabled:opacity-60"
+                  className="safe-tap w-full group relative py-5 sm:py-6 rounded-2xl bg-white text-black font-bold tracking-[0.35em] sm:tracking-[0.4em] text-[11px] overflow-hidden transition-all hover:scale-[1.01] active:scale-[0.98] disabled:opacity-60"
                   onClick={() => void generate_summary()}
                   disabled={busy !== "idle"}
+                  type="button"
                 >
                   <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-600 opacity-0 group-hover:opacity-100 transition-opacity" />
                   <div className="relative z-10 flex items-center justify-center gap-4 group-hover:text-white transition-all">
@@ -914,47 +944,51 @@ export default function App(): JSX.Element {
                   id="generated_output"
                   className="rounded-[2.5rem] border border-white/10 bg-white/[0.03] overflow-hidden shadow-2xl"
                 >
-                  <div className="flex flex-wrap items-center gap-3 px-6 py-4 border-b border-white/10 bg-white/[0.02]">
+                  <div className="flex flex-wrap items-center gap-3 px-4 sm:px-6 py-4 border-b border-white/10 bg-white/[0.02]">
                     <span className="text-[9px] font-bold tracking-[0.25em] text-white/30 uppercase">
                       Generated_Output
                     </span>
 
-                    <div className="ml-auto flex flex-wrap items-center gap-3">
+                    <div className="ml-auto flex flex-wrap items-center gap-2 sm:gap-3">
                       <button
-                        className="px-3 py-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-[10px] tracking-[0.2em] uppercase text-white/70"
+                        className="safe-tap px-3 py-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-[10px] tracking-[0.2em] uppercase text-white/70"
                         onClick={() =>
                           download_markdown("salitAI_minutes", generated_md)
                         }
+                        type="button"
                       >
                         MD
                       </button>
                       <button
-                        className="px-3 py-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-[10px] tracking-[0.2em] uppercase text-white/70"
+                        className="safe-tap px-3 py-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-[10px] tracking-[0.2em] uppercase text-white/70"
                         onClick={() =>
                           void download_docx("salitAI_minutes", generated_md)
                         }
+                        type="button"
                       >
                         DOCX
                       </button>
                       <button
-                        className="px-3 py-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-[10px] tracking-[0.2em] uppercase text-white/70"
+                        className="safe-tap px-3 py-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-[10px] tracking-[0.2em] uppercase text-white/70"
                         onClick={() =>
                           download_pdf("salitAI_minutes", generated_md)
                         }
+                        type="button"
                       >
                         PDF
                       </button>
                       <button
-                        className="px-3 py-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-[10px] tracking-[0.2em] uppercase text-white/70"
+                        className="safe-tap px-3 py-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-[10px] tracking-[0.2em] uppercase text-white/70"
                         onClick={() => setGeneratedMd("")}
                         title="Hide output"
+                        type="button"
                       >
                         ✕
                       </button>
                     </div>
                   </div>
 
-                  <div className="max-h-[340px] overflow-y-auto custom-scrollbar p-6">
+                  <div className="max-h-[420px] sm:max-h-[360px] overflow-y-auto custom-scrollbar p-4 sm:p-6">
                     <div
                       className="prose prose-invert max-w-none prose-p:text-white/70 prose-li:text-white/70 prose-strong:text-white"
                       dangerouslySetInnerHTML={{ __html: generated_html }}
@@ -971,20 +1005,20 @@ export default function App(): JSX.Element {
 
         {/* Working Contact (React) */}
         <section
-          className="py-32 border-t border-white/5 max-w-6xl mx-auto px-6 relative overflow-hidden"
+          className="py-24 sm:py-32 border-t border-white/5 max-w-6xl mx-auto px-4 sm:px-6 relative overflow-hidden"
           id="contact"
         >
           <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-blue-600/[0.07] blur-[120px] rounded-full -z-10" />
           <div className="absolute inset-0 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:14px_24px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] -z-10" />
 
-          <div className="text-center mb-20 relative">
+          <div className="text-center mb-14 sm:mb-20 relative">
             <div className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full border border-blue-500/20 bg-blue-500/5 mb-6">
               <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
               <span className="text-[9px] font-bold tracking-[0.4em] text-blue-400 uppercase">
                 System Gateway Open
               </span>
             </div>
-            <h2 className="text-6xl sm:text-7xl font-bold tracking-tighter mb-6">
+            <h2 className="text-5xl sm:text-7xl font-bold tracking-tighter mb-6">
               Start the{" "}
               <span className="bg-gradient-to-r from-blue-400 via-cyan-300 to-purple-500 bg-clip-text text-transparent">
                 Transmission.
@@ -1000,13 +1034,13 @@ export default function App(): JSX.Element {
             <div className="absolute -bottom-4 -right-4 w-12 h-12 border-b-2 border-r-2 border-white/10" />
 
             <form
-              className="relative z-10 space-y-8 p-10 sm:p-16 border border-white/10 bg-[#030408]/80 backdrop-blur-2xl rounded-[3rem] overflow-hidden"
+              className="relative z-10 space-y-7 sm:space-y-8 p-7 sm:p-10 md:p-16 border border-white/10 bg-[#030408]/80 backdrop-blur-2xl rounded-[2.5rem] sm:rounded-[3rem] overflow-hidden"
               onSubmit={(e) => {
                 e.preventDefault();
                 void submit_contact();
               }}
             >
-              <div className="grid sm:grid-cols-2 gap-10">
+              <div className="grid sm:grid-cols-2 gap-7 sm:gap-10">
                 <div className="space-y-3">
                   <div className="flex justify-between items-end px-1">
                     <label className="text-[10px] font-black tracking-[0.3em] text-white/20 uppercase">
@@ -1017,7 +1051,7 @@ export default function App(): JSX.Element {
                     </span>
                   </div>
                   <input
-                    className="w-full bg-white/[0.03] border border-white/10 rounded-2xl py-5 px-6 text-sm outline-none focus:border-blue-500/50 focus:bg-blue-500/5 transition-all placeholder:text-white/10 text-white/80"
+                    className="w-full bg-white/[0.03] border border-white/10 rounded-2xl py-4 sm:py-5 px-5 sm:px-6 text-sm outline-none focus:border-blue-500/50 focus:bg-blue-500/5 transition-all placeholder:text-white/10 text-white/80 safe-tap"
                     placeholder="Name or Organization"
                     required
                     value={contact_name}
@@ -1035,7 +1069,7 @@ export default function App(): JSX.Element {
                     </span>
                   </div>
                   <input
-                    className="w-full bg-white/[0.03] border border-white/10 rounded-2xl py-5 px-6 text-sm outline-none focus:border-cyan-500/50 focus:bg-cyan-500/5 transition-all placeholder:text-white/10 text-white/80"
+                    className="w-full bg-white/[0.03] border border-white/10 rounded-2xl py-4 sm:py-5 px-5 sm:px-6 text-sm outline-none focus:border-cyan-500/50 focus:bg-cyan-500/5 transition-all placeholder:text-white/10 text-white/80 safe-tap"
                     placeholder="email@network.com"
                     required
                     type="email"
@@ -1055,7 +1089,7 @@ export default function App(): JSX.Element {
                   </span>
                 </div>
                 <textarea
-                  className="w-full h-56 bg-white/[0.03] border border-white/10 rounded-[2.5rem] p-8 text-sm outline-none focus:border-purple-500/50 focus:bg-purple-500/5 transition-all resize-none font-mono leading-relaxed placeholder:text-white/10 text-white/80"
+                  className="w-full h-52 sm:h-56 bg-white/[0.03] border border-white/10 rounded-[2.5rem] p-6 sm:p-8 text-sm outline-none focus:border-purple-500/50 focus:bg-purple-500/5 transition-all resize-none font-mono leading-relaxed placeholder:text-white/10 text-white/80 safe-tap"
                   placeholder="Define project scope or mission parameters..."
                   required
                   value={contact_message}
@@ -1065,7 +1099,7 @@ export default function App(): JSX.Element {
 
               <div className="pt-2">
                 <button
-                  className="w-full group relative overflow-hidden rounded-full bg-white text-black py-6 font-black tracking-[0.5em] text-[11px] transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60"
+                  className="safe-tap w-full group relative overflow-hidden rounded-full bg-white text-black py-5 sm:py-6 font-black tracking-[0.35em] sm:tracking-[0.5em] text-[11px] transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60"
                   type="submit"
                   disabled={contact_status === "sending"}
                 >
@@ -1090,7 +1124,7 @@ export default function App(): JSX.Element {
                 ) : null}
               </div>
 
-              <div className="mt-10 flex flex-col sm:flex-row items-center justify-between pt-8 border-t border-white/5 gap-6">
+              <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row items-center justify-between pt-8 border-t border-white/5 gap-6">
                 <div className="flex items-center gap-6">
                   <div className="flex items-center gap-2">
                     <span className="flex h-2 w-2 relative">
