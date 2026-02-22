@@ -1,13 +1,12 @@
 /**
  * SalitAI.orbit Frontend
  * File: app.tsx
- * Version: 1.1.1
+ * Version: 1.1.2
  * Purpose: Full React UI + STT (Backend /api/stt) + Gemini Minutes + Export + Contact submit + Built-in prompt presets
  *          + Rotating About quotes + Smooth animated navigation scrolling.
  * Notes:
- * - Backend STT provider can be Deepgram/Whisper/ElevenLabs; frontend uses /api/stt only.
- * - Mobile view improved: responsive heights, spacing, stacking, and overflow handling.
- * - Added "Analyzing" loading overlay for STT upload/record processing + minutes generation.
+ * - Prompt presets were shortened to reduce token usage (free-tier friendly).
+ * - Marked parse options were removed to fix TS error on `mangle/headerIds`.
  */
 
 import React from "react";
@@ -36,91 +35,59 @@ type PromptPreset = {
   directives: string;
 };
 
+/**
+ * SHORT PRESETS (token saver)
+ * - Keep directives very short.
+ * - Avoid repeating long “Structure/Rules” blocks.
+ * - The backend already has structure rules; this is just “style hints”.
+ */
 const PROMPT_PRESETS: PromptPreset[] = [
   {
     id: "minutes_exec",
-    name: "Executive Minutes (Default)",
+    name: "Executive Minutes (Lite)",
     document_type: "Executive Meeting Minutes",
-    response_style: "Concise, professional, actionable",
+    response_style: "Concise, professional",
     directives: [
-      "You are a meeting-minutes generator.",
-      "Output MUST be in Markdown.",
-      "",
-      "Structure:",
-      "- Title",
-      "- Date/Time/Location (if mentioned)",
-      "- Attendees (if mentioned)",
-      "- Agenda (bullets)",
-      "- Discussion Summary (group by topic)",
-      "- Decisions (bullets)",
-      "- Action Items (Owner, Task, Due Date, Status)",
-      "- Risks/Blockers",
-      "- Next Meeting (if mentioned)",
-      "",
-      "Rules:",
-      "- Do NOT invent names/dates. If missing, write 'Not specified'.",
-      "- Keep it executive-level; remove filler words.",
-      "- Convert vague items into clear actions when possible, but do not hallucinate details.",
+      "Write meeting minutes in Markdown.",
+      "Do not invent details. If missing: Not specified.",
+      "Include: Title, Date, Attendees, Agenda, Key Points, Decisions, Action Items (Task and Notes), Risks, Next Meeting, Summary bullets.",
+      "Be brief and remove filler.",
     ].join("\n"),
   },
   {
     id: "project_summary",
-    name: "Project Summary",
-    document_type: "Standard Project Summary",
-    response_style: "Structured, technical, short paragraphs",
+    name: "Project Summary (Lite)",
+    document_type: "Project Summary",
+    response_style: "Structured, technical",
     directives: [
-      "Summarize the transcript as a project update.",
-      "Output in Markdown with sections:",
-      "- Overview",
-      "- Key Updates",
-      "- Metrics/Numbers mentioned",
-      "- Risks",
-      "- Next Steps (bullets)",
-      "",
-      "Rules:",
-      "- Only use facts from transcript.",
-      "- If something is unclear, add a 'Questions' section.",
+      "Summarize as a project update in Markdown.",
+      "Sections: Overview, Updates, Metrics, Risks, Next Steps.",
+      "Use only transcript facts. Add Questions if unclear.",
+      "Keep it short.",
     ].join("\n"),
   },
   {
     id: "post_mortem",
-    name: "Post-Mortem (Blameless)",
-    document_type: "Project Post-Mortem",
-    response_style: "Blameless, detailed, engineering tone",
+    name: "Post-Mortem (Lite)",
+    document_type: "Blameless Post-Mortem",
+    response_style: "Blameless, engineering",
     directives: [
-      "Create a blameless post-mortem based ONLY on the transcript.",
-      "Output in Markdown with sections:",
-      "- Incident Summary",
-      "- Timeline",
-      "- Impact",
-      "- Root Cause(s)",
-      "- Contributing Factors",
-      "- What Went Well",
-      "- What Went Wrong",
-      "- Action Items (table: Owner | Action | Priority | Due Date)",
-      "",
-      "Rules:",
-      "- Do NOT guess times; mark as 'Unknown' if missing.",
-      "- Keep it factual and blameless.",
+      "Create a blameless post-mortem in Markdown.",
+      "Sections: Summary, Impact, Root Causes, Factors, What Went Well, What Went Wrong, Action Items table (Owner | Action | Priority | Due).",
+      "Do not guess missing times/details. Mark Unknown.",
+      "Be factual and concise.",
     ].join("\n"),
   },
   {
     id: "step_by_step",
-    name: "Step-by-Step Guide",
+    name: "Step-by-Step Guide (Lite)",
     document_type: "Step-by-Step Guide",
-    response_style: "Clear, numbered, beginner-friendly",
+    response_style: "Beginner-friendly",
     directives: [
-      "Convert the transcript into a step-by-step guide.",
-      "Output in Markdown with:",
-      "- Goal",
-      "- Prerequisites",
-      "- Steps (numbered)",
-      "- Common Mistakes",
-      "- Checklist",
-      "",
-      "Rules:",
-      "- Keep steps short and actionable.",
-      "- Do not invent tools or requirements not stated in transcript.",
+      "Convert transcript into a step-by-step guide in Markdown.",
+      "Include: Goal, Prerequisites, Steps (numbered), Mistakes, Checklist.",
+      "Do not add tools/requirements not mentioned.",
+      "Keep steps short.",
     ].join("\n"),
   },
 ];
@@ -212,7 +179,7 @@ const ORIGINAL_HOME_HTML =
 </section>';
 
 const ORIGINAL_ENGINE_STRIP_HTML =
-  '<div class="py-20 border-y border-white/5 bg-[#030408] relative overflow-hidden group">\n<div class="absolute inset-0 pointer-events-none">\n<div class="absolute inset-y-0 w-[150px] bg-gradient-to-r from-transparent via-blue-500/10 to-transparent -skew-x-12 animate-[scan_6s_linear_infinite]"></div>\n</div>\n<div class="max-w-6xl mx-auto px-6 relative z-10">\n<p class="text-[9px] font-bold tracking-[0.6em] text-center text-white/20 uppercase mb-12 shimmer">\n            Engineered with High-Fidelity Intelligence\n        </p>\n<div class="flex flex-wrap justify-center items-center gap-8 lg:gap-16">\n<div class="group/item flex items-center gap-3 transition-all duration-500">\n<div class="relative">\n<div class="absolute inset-0 bg-blue-400/20 blur-md rounded-full scale-0 group-hover/item:scale-150 transition-transform duration-500"></div>\n<svg class="w-6 h-6 text-blue-400 relative z-10" fill="currentColor" viewbox="0 0 24 24">\n<path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z"></path>\n</svg>\n</div>\n<div class="flex flex-col">\n<span class="text-[11px] font-bold text-white/80 tracking-tighter group-hover/item:text-blue-400 transition-colors">Gemini</span>\n<div class="flex items-center gap-1.5">\n<span class="w-1 h-1 bg-blue-500 rounded-full animate-pulse"></span>\n<span class="text-[8px] text-white/20 font-mono uppercase tracking-widest">Logic_Core</span>\n</div>\n</div>\n</div>\n<div class="group/item flex items-center gap-3 transition-all duration-500">\n<div class="relative">\n<div class="absolute inset-0 bg-purple-400/20 blur-md rounded-full scale-0 group-hover/item:scale-150 transition-transform duration-500"></div>\n<svg class="w-6 h-6 text-purple-400 relative z-10" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">\n<path d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" stroke-linecap="round" stroke-linejoin="round"></path>\n</svg>\n</div>\n<div class="flex flex-col">\n<span class="text-[11px] font-bold text-white/80 tracking-tighter group-hover/item:text-purple-400 transition-colors">Gemini STT</span>\n<div class="flex items-center gap-1.5">\n<span class="w-1 h-1 bg-purple-500 rounded-full animate-pulse"></span>\n<span class="text-[8px] text-white/20 font-mono uppercase tracking-widest">Voice_Synth</span>\n</div>\n</div>\n</div>\n<div class="group/item flex items-center gap-3 transition-all duration-500">\n<div class="relative">\n<div class="absolute inset-0 bg-cyan-400/20 blur-md rounded-full scale-0 group-hover/item:scale-150 transition-transform duration-500"></div>\n<svg class="w-6 h-6 text-cyan-400 relative z-10 animate-[spin_8s_linear_infinite]" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">\n<circle cx="12" cy="12" fill="currentColor" r="2"></circle>\n<ellipse cx="12" cy="12" rx="10" ry="4"></ellipse>\n<ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(60 12 12)"></ellipse>\n<ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(120 12 12)"></ellipse>\n</svg>\n</div>\n<div class="flex flex-col">\n<span class="text-[11px] font-bold text-white/80 tracking-tighter group-hover/item:text-cyan-400 transition-colors">React v18</span>\n<div class="flex items-center gap-1.5">\n<span class="w-1 h-1 bg-cyan-500 rounded-full animate-pulse"></span>\n<span class="text-[8px] text-white/20 font-mono uppercase tracking-widest">Interface_Lib</span>\n</div>\n</div>\n</div>\n</div>\n</div>\n</div>\n</div>\n</div>\n</div>\n</div>';
+  '<div class="py-20 border-y border-white/5 bg-[#030408] relative overflow-hidden group">\n<div class="absolute inset-0 pointer-events-none">\n<div class="absolute inset-y-0 w-[150px] bg-gradient-to-r from-transparent via-blue-500/10 to-transparent -skew-x-12 animate-[scan_6s_linear_infinite]"></div>\n</div>\n<div class="max-w-6xl mx-auto px-6 relative z-10">\n<p class="text-[9px] font-bold tracking-[0.6em] text-center text-white/20 uppercase mb-12 shimmer">\n            Engineered with High-Fidelity Intelligence\n        </p>\n<div class="flex flex-wrap justify-center items-center gap-8 lg:gap-16">\n<div class="group/item flex items-center gap-3 transition-all duration-500">\n<div class="relative">\n<div class="absolute inset-0 bg-blue-400/20 blur-md rounded-full scale-0 group-hover/item:scale-150 transition-transform duration-500"></div>\n<svg class="w-6 h-6 text-blue-400 relative z-10" fill="currentColor" viewbox="0 0 24 24">\n<path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z"></path>\n</svg>\n</div>\n<div class="flex flex-col">\n<span class="text-[11px] font-bold text-white/80 tracking-tighter group-hover/item:text-blue-400 transition-colors">Gemini</span>\n<div class="flex items-center gap-1.5">\n<span class="w-1 h-1 bg-blue-500 rounded-full animate-pulse"></span>\n<span class="text-[8px] text-white/20 font-mono uppercase tracking-widest">Logic_Core</span>\n</div>\n</div>\n</div>\n<div class="group/item flex items-center gap-3 transition-all duration-500">\n<div class="relative">\n<div class="absolute inset-0 bg-purple-400/20 blur-md rounded-full scale-0 group-hover/item:scale-150 transition-transform duration-500"></div>\n<svg class="w-6 h-6 text-purple-400 relative z-10" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">\n<path d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" stroke-linecap="round" stroke-linejoin="round"></path>\n</svg>\n</div>\n<div class="flex flex-col">\n<span class="text-[11px] font-bold text-white/80 tracking-tighter group-hover/item:text-purple-400 transition-colors">Gemini STT</span>\n<div class="flex items-center gap-1.5">\n<span class="w-1 h-1 bg-purple-500 rounded-full animate-pulse"></span>\n<span class="text-[8px] text-white/20 font-mono uppercase tracking-widest">Voice_Synth</span>\n</div>\n</div>\n</div>\n<div class="group/item flex items-center gap-3 transition-all duration-500">\n<div class="relative">\n<div class="absolute inset-0 bg-cyan-400/20 blur-md rounded-full scale-0 group-hover/item:scale-150 transition-transform duration-500"></div>\n<svg class="w-6 h-6 text-cyan-400 relative z-10 animate-[spin_8s_linear_infinite]" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">\n<circle cx="12" cy="12" fill="currentColor" r="2"></circle>\n<ellipse cx="12" cy="12" rx="10" ry="4"></ellipse>\n<ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(60 12 12)"></ellipse>\n<ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(120 12 12)"></ellipse>\n</svg>\n</div>\n<div class="flex flex-col">\n<span class="text-[11px] font-bold text-white/80 tracking-tighter group-hover/item:text-cyan-400 transition-colors">React v18</span>\n<div class="flex items-center gap-1.5">\n<span class="w-1 h-1 bg-cyan-500 rounded-full animate-pulse"></span>\n<span class="text-[8px] text-white/20 font-mono uppercase tracking-widest">Interface_Lib</span>\n</div>\n</div>\n</div>\n</div>\n</div>\n</div>\n</div>\n</div>\n</div>\n</div>\n</div>';
 
 /**
  * NOTE: Sizing/classes unchanged — only IDs were added so React can rotate quote text.
@@ -311,7 +278,6 @@ function clamp(n: number, min: number, max: number): number {
 }
 
 function get_fixed_header_offset_px(): number {
-  // Your header height is h-20 (80px). Add a small breathing space.
   return 96;
 }
 
@@ -355,11 +321,7 @@ function pulse_section_once(section: HTMLElement): void {
   section.offsetWidth;
   section.classList.add(SECTION_PULSE_CLASS);
 
-  const removeAfterMs = 1100;
-  window.setTimeout(
-    () => section.classList.remove(SECTION_PULSE_CLASS),
-    removeAfterMs,
-  );
+  window.setTimeout(() => section.classList.remove(SECTION_PULSE_CLASS), 1100);
 }
 
 function close_mobile_menu_if_open(): void {
@@ -391,10 +353,7 @@ function BusyOverlay({
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-6">
-      {/* Backdrop */}
       <div className="absolute inset-0 bg-black/70 backdrop-blur-xl" />
-
-      {/* Card */}
       <div className="relative w-full max-w-xl rounded-[2.75rem] border border-white/10 bg-[#030408]/80 shadow-[0_35px_120px_-40px_rgba(0,0,0,0.85)] overflow-hidden">
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-[740px] h-[420px] bg-blue-600/10 blur-[120px] rounded-full" />
@@ -414,7 +373,6 @@ function BusyOverlay({
               </span>
             </div>
 
-            {/* Spinner */}
             <div className="relative w-12 h-12">
               <div className="absolute inset-0 rounded-full border border-white/10" />
               <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-cyan-300/80 border-r-purple-400/60 animate-spin" />
@@ -432,7 +390,6 @@ function BusyOverlay({
             </p>
           </div>
 
-          {/* Animated bars */}
           <div className="mt-10">
             <div className="flex items-end gap-2 h-10">
               {Array.from({ length: 14 }).map((_, i) => (
@@ -449,7 +406,7 @@ function BusyOverlay({
             </div>
 
             <div className="mt-6 text-[9px] font-mono tracking-[0.35em] text-white/15 uppercase">
-              {subtitle ? "STATUS" : "STATUS"}: LIVE_PIPELINE • NO_DATA_LOSS
+              STATUS: LIVE_PIPELINE • NO_DATA_LOSS
             </div>
           </div>
         </div>
@@ -472,7 +429,6 @@ export default function App(): JSX.Element {
   const [response_style, setResponseStyle] = React.useState<string>("");
   const [directives, setDirectives] = React.useState<string>("");
 
-  // Built-in prompt preset + extra notes
   const [preset_id, setPresetId] = React.useState<string>(
     PROMPT_PRESETS[0]?.id ?? "",
   );
@@ -492,7 +448,6 @@ export default function App(): JSX.Element {
   const chunksRef = React.useRef<BlobPart[]>([]);
   const streamRef = React.useRef<MediaStream | null>(null);
 
-  // Inject tiny CSS for the section pulse highlight + analyzing animations (no sizing changes).
   React.useEffect(() => {
     const STYLE_ID = "salitai_nav_anim_styles";
     if (document.getElementById(STYLE_ID)) return;
@@ -510,14 +465,7 @@ export default function App(): JSX.Element {
         animation: section_pulse_once 1.05s ease-out 1;
         border-radius: inherit;
       }
-
-      /* Mobile stability helpers (no global layout breaking) */
-      .safe-tap {
-        -webkit-tap-highlight-color: transparent;
-        touch-action: manipulation;
-      }
-
-      /* Busy overlay bar animation */
+      .safe-tap { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
       @keyframes an_bar {
         0%   { transform: scaleY(0.55); opacity: 0.55; }
         50%  { transform: scaleY(1.25); opacity: 1; }
@@ -542,7 +490,6 @@ export default function App(): JSX.Element {
     if (year) year.textContent = String(new Date().getFullYear());
   }, []);
 
-  // Animated nav scroll via data-nav
   React.useEffect(() => {
     const handler = (e: MouseEvent) => {
       const t = e.target as HTMLElement | null;
@@ -573,7 +520,6 @@ export default function App(): JSX.Element {
     return () => document.removeEventListener("click", handler);
   }, []);
 
-  // Rotate About quote
   React.useEffect(() => {
     const quoteEl = document.getElementById("about_quote_text");
     const initialsEl = document.getElementById("about_quote_initials");
@@ -593,16 +539,14 @@ export default function App(): JSX.Element {
 
     apply(ABOUT_QUOTES[idx]);
 
-    const intervalMs = 8000;
     const timer = window.setInterval(() => {
       idx = (idx + 1) % ABOUT_QUOTES.length;
       apply(ABOUT_QUOTES[idx]);
-    }, intervalMs);
+    }, 8000);
 
     return () => window.clearInterval(timer);
   }, []);
 
-  // Auto-apply preset to fields when changed
   React.useEffect(() => {
     const p = PROMPT_PRESETS.find((x) => x.id === preset_id);
     if (!p) return;
@@ -627,11 +571,15 @@ export default function App(): JSX.Element {
     return String(data?.text || "");
   }
 
+  /**
+   * Token-saver:
+   * - Send SHORT directives only.
+   * - Avoid duplicating long rules in frontend (backend already structures).
+   */
   async function minutes_from_transcript(text: string): Promise<string> {
+    const notes = extra_notes.trim();
     const final_directives =
-      extra_notes.trim().length > 0
-        ? `${directives}\n\n---\nUser Notes:\n${extra_notes.trim()}\n`
-        : directives;
+      notes.length > 0 ? `${directives}\nNotes: ${notes}\n` : directives;
 
     const r = await fetch(`${API_BASE}/api/minutes`, {
       method: "POST",
@@ -687,7 +635,6 @@ export default function App(): JSX.Element {
 
     recorder.onstop = async () => {
       try {
-        // show analyzing immediately when stop is triggered
         setBusy("uploading");
 
         const blob = new Blob(chunksRef.current, {
@@ -716,7 +663,6 @@ export default function App(): JSX.Element {
     const r = recorderRef.current;
     if (!r) return;
 
-    // flip to uploading right away so UI shows "Analyzing..." while onstop work runs
     setBusy("uploading");
     if (r.state !== "inactive") r.stop();
   }
@@ -744,11 +690,11 @@ export default function App(): JSX.Element {
     }
   }
 
+  /**
+   * FIX: remove Marked options that cause TS error on current marked typings.
+   */
   const generated_html = React.useMemo(() => {
-    return marked.parse(generated_md || "", {
-      mangle: false,
-      headerIds: false,
-    });
+    return marked.parse(generated_md || "") as string;
   }, [generated_md]);
 
   async function submit_contact(): Promise<void> {
@@ -798,7 +744,6 @@ export default function App(): JSX.Element {
 
   return (
     <div className="min-h-screen text-white relative overflow-hidden">
-      {/* Analyzing / Generating overlay */}
       <BusyOverlay
         open={overlay_open}
         title={overlay_title}
@@ -830,7 +775,6 @@ export default function App(): JSX.Element {
               <div
                 className={class_names(
                   "glass-card flex flex-col overflow-hidden border border-white/10 bg-[#05060b]/60 backdrop-blur-2xl rounded-[2.5rem] shadow-2xl relative",
-                  // Mobile: flexible height; Desktop: fixed 760
                   "min-h-[560px] sm:min-h-[640px] lg:h-[760px] lg:max-h-[760px]",
                 )}
               >
@@ -939,7 +883,6 @@ export default function App(): JSX.Element {
                   </p>
                 </div>
 
-                {/* Built-in prompt preset */}
                 <div className="grid sm:grid-cols-2 gap-6 sm:gap-8 mb-8 sm:mb-10">
                   <div className="space-y-3 sm:space-y-4">
                     <label className="text-[10px] font-bold tracking-[0.2em] text-white/30 uppercase ml-1">
@@ -983,7 +926,6 @@ export default function App(): JSX.Element {
                   </div>
                 </div>
 
-                {/* Existing fields */}
                 <div className="grid sm:grid-cols-2 gap-6 sm:gap-8 mb-8 sm:mb-10">
                   <div className="space-y-3 sm:space-y-4">
                     <label className="text-[10px] font-bold tracking-[0.2em] text-white/30 uppercase ml-1">
@@ -1033,7 +975,7 @@ export default function App(): JSX.Element {
                 <div className="space-y-3 sm:space-y-4 mb-6 sm:mb-8 flex-1 min-h-0 flex flex-col">
                   <div className="flex items-center justify-between px-1">
                     <label className="text-[10px] font-bold tracking-[0.2em] text-white/30 uppercase">
-                      Special Directives (Template)
+                      Special Directives (Lite)
                     </label>
                     <span className="text-[8px] font-mono text-cyan-500/40 uppercase">
                       A.I. Tuning
@@ -1042,7 +984,7 @@ export default function App(): JSX.Element {
 
                   <textarea
                     className="min-h-0 flex-1 w-full bg-[#030408]/80 rounded-[2rem] p-6 sm:p-8 text-sm text-white outline-none focus:bg-[#030408]/95 transition-all resize-none leading-relaxed placeholder:text-white/2 overflow-y-auto custom-scrollbar safe-tap"
-                    placeholder="Preset template will appear here. You can edit it."
+                    placeholder="Preset will appear here. You can edit it."
                     value={directives}
                     onChange={(e) => setDirectives(e.target.value)}
                     disabled={busy !== "idle"}
