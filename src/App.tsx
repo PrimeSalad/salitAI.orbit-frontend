@@ -1,12 +1,13 @@
 /**
  * SalitAI.orbit Frontend
  * File: app.tsx
- * Version: 1.1.0
+ * Version: 1.1.1
  * Purpose: Full React UI + STT (Backend /api/stt) + Gemini Minutes + Export + Contact submit + Built-in prompt presets
  *          + Rotating About quotes + Smooth animated navigation scrolling.
  * Notes:
  * - Backend STT provider can be Deepgram/Whisper/ElevenLabs; frontend uses /api/stt only.
  * - Mobile view improved: responsive heights, spacing, stacking, and overflow handling.
+ * - Added "Analyzing" loading overlay for STT upload/record processing + minutes generation.
  */
 
 import React from "react";
@@ -211,7 +212,7 @@ const ORIGINAL_HOME_HTML =
 </section>';
 
 const ORIGINAL_ENGINE_STRIP_HTML =
-  '<div class="py-20 border-y border-white/5 bg-[#030408] relative overflow-hidden group">\n<div class="absolute inset-0 pointer-events-none">\n<div class="absolute inset-y-0 w-[150px] bg-gradient-to-r from-transparent via-blue-500/10 to-transparent -skew-x-12 animate-[scan_6s_linear_infinite]"></div>\n</div>\n<div class="max-w-6xl mx-auto px-6 relative z-10">\n<p class="text-[9px] font-bold tracking-[0.6em] text-center text-white/20 uppercase mb-12 shimmer">\n            Engineered with High-Fidelity Intelligence\n        </p>\n<div class="flex flex-wrap justify-center items-center gap-8 lg:gap-16">\n<div class="group/item flex items-center gap-3 transition-all duration-500">\n<div class="relative">\n<div class="absolute inset-0 bg-blue-400/20 blur-md rounded-full scale-0 group-hover/item:scale-150 transition-transform duration-500"></div>\n<svg class="w-6 h-6 text-blue-400 relative z-10" fill="currentColor" viewbox="0 0 24 24">\n<path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z"></path>\n</svg>\n</div>\n<div class="flex flex-col">\n<span class="text-[11px] font-bold text-white/80 tracking-tighter group-hover/item:text-blue-400 transition-colors">Gemini</span>\n<div class="flex items-center gap-1.5">\n<span class="w-1 h-1 bg-blue-500 rounded-full animate-pulse"></span>\n<span class="text-[8px] text-white/20 font-mono uppercase tracking-widest">Logic_Core</span>\n</div>\n</div>\n</div>\n<div class="group/item flex items-center gap-3 transition-all duration-500">\n<div class="relative">\n<div class="absolute inset-0 bg-purple-400/20 blur-md rounded-full scale-0 group-hover/item:scale-150 transition-transform duration-500"></div>\n<svg class="w-6 h-6 text-purple-400 relative z-10" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">\n<path d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" stroke-linecap="round" stroke-linejoin="round"></path>\n</svg>\n</div>\n<div class="flex flex-col">\n<span class="text-[11px] font-bold text-white/80 tracking-tighter group-hover/item:text-purple-400 transition-colors">Gemini STT</span>\n<div class="flex items-center gap-1.5">\n<span class="w-1 h-1 bg-purple-500 rounded-full animate-pulse"></span>\n<span class="text-[8px] text-white/20 font-mono uppercase tracking-widest">Voice_Synth</span>\n</div>\n</div>\n</div>\n<div class="group/item flex items-center gap-3 transition-all duration-500">\n<div class="relative">\n<div class="absolute inset-0 bg-cyan-400/20 blur-md rounded-full scale-0 group-hover/item:scale-150 transition-transform duration-500"></div>\n<svg class="w-6 h-6 text-cyan-400 relative z-10 animate-[spin_8s_linear_infinite]" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">\n<circle cx="12" cy="12" fill="currentColor" r="2"></circle>\n<ellipse cx="12" cy="12" rx="10" ry="4"></ellipse>\n<ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(60 12 12)"></ellipse>\n<ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(120 12 12)"></ellipse>\n</svg>\n</div>\n<div class="flex flex-col">\n<span class="text-[11px] font-bold text-white/80 tracking-tighter group-hover/item:text-cyan-400 transition-colors">React v18</span>\n<div class="flex items-center gap-1.5">\n<span class="w-1 h-1 bg-cyan-500 rounded-full animate-pulse"></span>\n<span class="text-[8px] text-white/20 font-mono uppercase tracking-widest">Interface_Lib</span>\n</div>\n</div>\n</div>\n</div>\n</div>\n</div>\n</div>\n</div>\n</div>';
+  '<div class="py-20 border-y border-white/5 bg-[#030408] relative overflow-hidden group">\n<div class="absolute inset-0 pointer-events-none">\n<div class="absolute inset-y-0 w-[150px] bg-gradient-to-r from-transparent via-blue-500/10 to-transparent -skew-x-12 animate-[scan_6s_linear_infinite]"></div>\n</div>\n<div class="max-w-6xl mx-auto px-6 relative z-10">\n<p class="text-[9px] font-bold tracking-[0.6em] text-center text-white/20 uppercase mb-12 shimmer">\n            Engineered with High-Fidelity Intelligence\n        </p>\n<div class="flex flex-wrap justify-center items-center gap-8 lg:gap-16">\n<div class="group/item flex items-center gap-3 transition-all duration-500">\n<div class="relative">\n<div class="absolute inset-0 bg-blue-400/20 blur-md rounded-full scale-0 group-hover/item:scale-150 transition-transform duration-500"></div>\n<svg class="w-6 h-6 text-blue-400 relative z-10" fill="currentColor" viewbox="0 0 24 24">\n<path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z"></path>\n</svg>\n</div>\n<div class="flex flex-col">\n<span class="text-[11px] font-bold text-white/80 tracking-tighter group-hover/item:text-blue-400 transition-colors">Gemini</span>\n<div class="flex items-center gap-1.5">\n<span class="w-1 h-1 bg-blue-500 rounded-full animate-pulse"></span>\n<span class="text-[8px] text-white/20 font-mono uppercase tracking-widest">Logic_Core</span>\n</div>\n</div>\n</div>\n<div class="group/item flex items-center gap-3 transition-all duration-500">\n<div class="relative">\n<div class="absolute inset-0 bg-purple-400/20 blur-md rounded-full scale-0 group-hover/item:scale-150 transition-transform duration-500"></div>\n<svg class="w-6 h-6 text-purple-400 relative z-10" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">\n<path d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" stroke-linecap="round" stroke-linejoin="round"></path>\n</svg>\n</div>\n<div class="flex flex-col">\n<span class="text-[11px] font-bold text-white/80 tracking-tighter group-hover/item:text-purple-400 transition-colors">Gemini STT</span>\n<div class="flex items-center gap-1.5">\n<span class="w-1 h-1 bg-purple-500 rounded-full animate-pulse"></span>\n<span class="text-[8px] text-white/20 font-mono uppercase tracking-widest">Voice_Synth</span>\n</div>\n</div>\n</div>\n<div class="group/item flex items-center gap-3 transition-all duration-500">\n<div class="relative">\n<div class="absolute inset-0 bg-cyan-400/20 blur-md rounded-full scale-0 group-hover/item:scale-150 transition-transform duration-500"></div>\n<svg class="w-6 h-6 text-cyan-400 relative z-10 animate-[spin_8s_linear_infinite]" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">\n<circle cx="12" cy="12" fill="currentColor" r="2"></circle>\n<ellipse cx="12" cy="12" rx="10" ry="4"></ellipse>\n<ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(60 12 12)"></ellipse>\n<ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(120 12 12)"></ellipse>\n</svg>\n</div>\n<div class="flex flex-col">\n<span class="text-[11px] font-bold text-white/80 tracking-tighter group-hover/item:text-cyan-400 transition-colors">React v18</span>\n<div class="flex items-center gap-1.5">\n<span class="w-1 h-1 bg-cyan-500 rounded-full animate-pulse"></span>\n<span class="text-[8px] text-white/20 font-mono uppercase tracking-widest">Interface_Lib</span>\n</div>\n</div>\n</div>\n</div>\n</div>\n</div>\n</div>\n</div>\n</div>\n</div>';
 
 /**
  * NOTE: Sizing/classes unchanged — only IDs were added so React can rotate quote text.
@@ -368,6 +369,96 @@ function close_mobile_menu_if_open(): void {
 }
 
 /* ============================= */
+/* LOADING / ANALYZING UI        */
+/* ============================= */
+
+function busy_label(busy: Busy): string {
+  if (busy === "uploading") return "ANALYZING AUDIO";
+  if (busy === "generating") return "GENERATING OUTPUT";
+  return "";
+}
+
+function BusyOverlay({
+  open,
+  title,
+  subtitle,
+}: {
+  open: boolean;
+  title: string;
+  subtitle?: string;
+}): JSX.Element | null {
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-6">
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-xl" />
+
+      {/* Card */}
+      <div className="relative w-full max-w-xl rounded-[2.75rem] border border-white/10 bg-[#030408]/80 shadow-[0_35px_120px_-40px_rgba(0,0,0,0.85)] overflow-hidden">
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-[740px] h-[420px] bg-blue-600/10 blur-[120px] rounded-full" />
+          <div className="absolute -bottom-28 left-[-120px] w-[520px] h-[520px] bg-purple-600/10 blur-[140px] rounded-full" />
+          <div className="absolute inset-0 opacity-[0.18] bg-[linear-gradient(to_right,#ffffff0a_1px,transparent_1px),linear-gradient(to_bottom,#ffffff0a_1px,transparent_1px)] bg-[size:28px_28px] [mask-image:radial-gradient(ellipse_70%_55%_at_50%_40%,#000_55%,transparent_100%)]" />
+        </div>
+
+        <div className="relative p-10 sm:p-12">
+          <div className="flex items-center justify-between gap-6">
+            <div className="inline-flex items-center gap-3 px-4 py-2 rounded-full border border-cyan-500/20 bg-cyan-500/5">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-70" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-400" />
+              </span>
+              <span className="text-[9px] font-bold tracking-[0.4em] text-cyan-300 uppercase">
+                Processing
+              </span>
+            </div>
+
+            {/* Spinner */}
+            <div className="relative w-12 h-12">
+              <div className="absolute inset-0 rounded-full border border-white/10" />
+              <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-cyan-300/80 border-r-purple-400/60 animate-spin" />
+              <div className="absolute inset-2 rounded-full bg-white/[0.03]" />
+            </div>
+          </div>
+
+          <div className="mt-8">
+            <h4 className="text-3xl sm:text-4xl font-bold tracking-tight text-white">
+              {title}
+            </h4>
+            <p className="mt-3 text-sm text-white/35 leading-relaxed max-w-md">
+              {subtitle ||
+                "Hold steady. We’re extracting signal, structuring data, and preparing your output."}
+            </p>
+          </div>
+
+          {/* Animated bars */}
+          <div className="mt-10">
+            <div className="flex items-end gap-2 h-10">
+              {Array.from({ length: 14 }).map((_, i) => (
+                <div
+                  // eslint-disable-next-line react/no-array-index-key
+                  key={i}
+                  className="w-[10px] sm:w-3 rounded-full bg-gradient-to-t from-blue-500/20 via-cyan-400/30 to-purple-500/20 animate-[an_bar_1.1s_ease-in-out_infinite]"
+                  style={{
+                    animationDelay: `${i * 70}ms`,
+                    height: `${18 + ((i * 17) % 28)}px`,
+                  }}
+                />
+              ))}
+            </div>
+
+            <div className="mt-6 text-[9px] font-mono tracking-[0.35em] text-white/15 uppercase">
+              {subtitle ? "STATUS" : "STATUS"}: LIVE_PIPELINE • NO_DATA_LOSS
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ============================= */
 /* APP                           */
 /* ============================= */
 
@@ -401,7 +492,7 @@ export default function App(): JSX.Element {
   const chunksRef = React.useRef<BlobPart[]>([]);
   const streamRef = React.useRef<MediaStream | null>(null);
 
-  // Inject tiny CSS for the section pulse highlight (no sizing changes).
+  // Inject tiny CSS for the section pulse highlight + analyzing animations (no sizing changes).
   React.useEffect(() => {
     const STYLE_ID = "salitai_nav_anim_styles";
     if (document.getElementById(STYLE_ID)) return;
@@ -424,6 +515,13 @@ export default function App(): JSX.Element {
       .safe-tap {
         -webkit-tap-highlight-color: transparent;
         touch-action: manipulation;
+      }
+
+      /* Busy overlay bar animation */
+      @keyframes an_bar {
+        0%   { transform: scaleY(0.55); opacity: 0.55; }
+        50%  { transform: scaleY(1.25); opacity: 1; }
+        100% { transform: scaleY(0.65); opacity: 0.65; }
       }
     `;
     document.head.appendChild(style);
@@ -589,12 +687,14 @@ export default function App(): JSX.Element {
 
     recorder.onstop = async () => {
       try {
+        // show analyzing immediately when stop is triggered
+        setBusy("uploading");
+
         const blob = new Blob(chunksRef.current, {
           type: recorder.mimeType || "audio/webm",
         });
         const file = new File([blob], "recording.webm", { type: blob.type });
 
-        setBusy("uploading");
         const text = await stt_from_file(file);
         setTranscript(text);
         setGeneratedMd("");
@@ -615,6 +715,9 @@ export default function App(): JSX.Element {
   function stop_recording(): void {
     const r = recorderRef.current;
     if (!r) return;
+
+    // flip to uploading right away so UI shows "Analyzing..." while onstop work runs
+    setBusy("uploading");
     if (r.state !== "inactive") r.stop();
   }
 
@@ -684,8 +787,24 @@ export default function App(): JSX.Element {
     }
   }
 
+  const overlay_open = busy === "uploading" || busy === "generating";
+  const overlay_title = busy_label(busy);
+  const overlay_subtitle =
+    busy === "uploading"
+      ? "We’re converting audio into a clean transcript. This usually takes a few seconds."
+      : busy === "generating"
+        ? "We’re turning your transcript into structured minutes using your selected prompt."
+        : undefined;
+
   return (
     <div className="min-h-screen text-white relative overflow-hidden">
+      {/* Analyzing / Generating overlay */}
+      <BusyOverlay
+        open={overlay_open}
+        title={overlay_title}
+        subtitle={overlay_subtitle}
+      />
+
       <div className="fixed inset-0 -z-10">
         <div className="absolute inset-0 bg-[#02030a]" />
         <div className="absolute inset-0 bg-gradient-to-b from-[#070a1a] via-[#02030a] to-[#000000]" />
@@ -734,6 +853,7 @@ export default function App(): JSX.Element {
                     }}
                     title="Clear"
                     type="button"
+                    disabled={busy !== "idle"}
                   >
                     ✕
                   </button>
@@ -744,6 +864,7 @@ export default function App(): JSX.Element {
                   placeholder="// Start speaking or drop a file to begin..."
                   value={transcript}
                   onChange={(e) => setTranscript(e.target.value)}
+                  disabled={busy === "uploading" || busy === "generating"}
                 />
 
                 <div className="p-4 sm:p-6 bg-white/[0.01] border-t border-white/5 grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
@@ -829,6 +950,7 @@ export default function App(): JSX.Element {
                         className="w-full bg-white/[0.03] border border-white/10 rounded-2xl py-4 sm:py-5 px-5 sm:px-6 text-sm text-white/70 outline-none focus:border-cyan-500/50 focus:bg-cyan-500/5 transition-all appearance-none cursor-pointer safe-tap"
                         value={preset_id}
                         onChange={(e) => setPresetId(e.target.value)}
+                        disabled={busy !== "idle"}
                       >
                         {PROMPT_PRESETS.map((p) => (
                           <option
@@ -856,6 +978,7 @@ export default function App(): JSX.Element {
                       type="text"
                       value={extra_notes}
                       onChange={(e) => setExtraNotes(e.target.value)}
+                      disabled={busy !== "idle"}
                     />
                   </div>
                 </div>
@@ -871,6 +994,7 @@ export default function App(): JSX.Element {
                         className="w-full bg-white/[0.03] border border-white/10 rounded-2xl py-4 sm:py-5 px-5 sm:px-6 text-sm text-white/70 outline-none focus:border-blue-500/50 focus:bg-blue-500/5 transition-all appearance-none cursor-pointer safe-tap"
                         value={document_type}
                         onChange={(e) => setDocumentType(e.target.value)}
+                        disabled={busy !== "idle"}
                       >
                         <option className="bg-[#05060b]">
                           Executive Meeting Minutes
@@ -901,6 +1025,7 @@ export default function App(): JSX.Element {
                       type="text"
                       value={response_style}
                       onChange={(e) => setResponseStyle(e.target.value)}
+                      disabled={busy !== "idle"}
                     />
                   </div>
                 </div>
@@ -920,6 +1045,7 @@ export default function App(): JSX.Element {
                     placeholder="Preset template will appear here. You can edit it."
                     value={directives}
                     onChange={(e) => setDirectives(e.target.value)}
+                    disabled={busy !== "idle"}
                   />
                 </div>
 
