@@ -14,7 +14,7 @@ import {
   download_pdf,
 } from "./utils/export_utils";
 
-const API_BASE = "http://localhost:8082";
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8082";
 
 type Busy = "idle" | "recording" | "uploading" | "generating";
 
