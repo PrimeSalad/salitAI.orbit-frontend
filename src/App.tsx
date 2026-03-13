@@ -59,7 +59,7 @@ const PROMPT_PRESETS: PromptPreset[] = [
     name: "Project Summary (Lite)",
     document_type: "Project Summary",
     response_style: "Structured, technical",
-    directives: [
+    directives: [ 
       "Summarize as a project update in Markdown.",
       "Sections: Overview, Updates, Metrics, Risks, Next Steps.",
       "Use only transcript facts. Add Questions if unclear.",
@@ -263,7 +263,7 @@ const ORIGINAL_ABOUT_HTML = `<section class="py-32 border-t border-white/5 max-w
 </section>`;
 
 const ORIGINAL_FOOTER_HTML =
-  '<footer class="py-16 border-t border-white/5 text-center text-[10px] tracking-[1em] text-white/3 uppercase">\n            © <span id="year"></span> salitAI.orbit • Engineered by DotOrbit\n        </footer>';
+  '<footer class="py-16 border-t border-white/5 text-center text-[10px] tracking-[1em] text-white/3 uppercase">\n            © <span id="year"></span> salitAI.orbit • Developed by Gene Elpie Landoy, DotOrbit\n        </footer>';
 
 /* ============================= */
 /* NAV / SCROLL HELPERS          */
