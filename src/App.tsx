@@ -19,7 +19,12 @@ import {
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8082";
 
-type Busy = "idle" | "recording" | "uploading" | "generating";
+type Busy = "idle" | "recording" | "uploading" | "analyzing" | "generating";
+
+type ChunkInfo = {
+  current: number;
+  total: number;
+};
 
 function class_names(
   ...parts: Array<string | false | null | undefined>
@@ -335,21 +340,81 @@ function close_mobile_menu_if_open(): void {
 /* ============================= */
 
 function busy_label(busy: Busy): string {
-  if (busy === "uploading") return "ANALYZING AUDIO";
+  if (busy === "uploading") return "UPLOADING AUDIO";
+  if (busy === "analyzing") return "ANALYZING AUDIO";
   if (busy === "generating") return "GENERATING OUTPUT";
   return "";
+}
+
+function SuccessNotification({
+  show,
+  onClose,
+}: {
+  show: boolean;
+  onClose: () => void;
+}): JSX.Element | null {
+  React.useEffect(() => {
+    if (show) {
+      const timer = setTimeout(() => {
+        onClose();
+      }, 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [show, onClose]);
+
+  if (!show) return null;
+
+  return (
+    <div className="fixed top-6 right-6 z-[300] animate-[slideIn_0.3s_ease-out]">
+      <div className="relative rounded-2xl border border-green-500/20 bg-green-500/10 backdrop-blur-xl shadow-2xl overflow-hidden max-w-md">
+        <div className="absolute inset-0 bg-gradient-to-br from-green-400/10 to-transparent" />
+        <div className="relative p-6 flex items-start gap-4">
+          <div className="flex-shrink-0 w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
+            <svg className="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <div className="flex-1 min-w-0">
+            <h4 className="text-sm font-bold text-white mb-1">Analysis Complete!</h4>
+            <p className="text-xs text-white/60">Your audio has been successfully transcribed.</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="flex-shrink-0 text-white/40 hover:text-white/80 transition-colors"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <div className="h-1 bg-green-500/20">
+          <div className="h-full bg-green-500 animate-[shrink_4s_linear]" />
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function BusyOverlay({
   open,
   title,
   subtitle,
+  uploadProgress,
+  analysisProgress,
+  chunkInfo,
 }: {
   open: boolean;
   title: string;
   subtitle?: string;
+  uploadProgress?: number;
+  analysisProgress?: number;
+  chunkInfo?: ChunkInfo | null;
 }): JSX.Element | null {
   if (!open) return null;
+
+  const showUploadProgress = typeof uploadProgress === 'number' && uploadProgress >= 0;
+  const showAnalysisProgress = typeof analysisProgress === 'number' && analysisProgress >= 0;
+  const showChunkInfo = chunkInfo && chunkInfo.total > 1;
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-6">
@@ -386,15 +451,60 @@ function BusyOverlay({
             </h4>
             <p className="mt-3 text-sm text-white/35 leading-relaxed max-w-md">
               {subtitle ||
-                "Hold steady. We’re extracting signal, structuring data, and preparing your output."}
+                "Hold steady. We're extracting signal, structuring data, and preparing your output."}
             </p>
           </div>
+
+          {showUploadProgress && (
+            <div className="mt-8 space-y-3">
+              <div className="flex items-center justify-between text-xs">
+                <div className="flex items-center gap-3">
+                  <span className="text-white/50 font-mono uppercase tracking-wider">Uploading Audio</span>
+                  {showChunkInfo && (
+                    <span className="text-[10px] font-bold text-white/30">
+                      CHUNK <span className="text-cyan-400">{chunkInfo.current}</span>/{chunkInfo.total}
+                    </span>
+                  )}
+                </div>
+                <span className="text-cyan-400 font-bold tabular-nums">{uploadProgress}%</span>
+              </div>
+              <div className="relative w-full h-2 bg-white/5 rounded-full overflow-hidden border border-white/10">
+                <div
+                  className="absolute inset-0 bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 transition-all duration-300 ease-out"
+                  style={{ width: `${uploadProgress}%` }}
+                />
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-[shimmer_2s_infinite]" />
+              </div>
+            </div>
+          )}
+
+          {showAnalysisProgress && (
+            <div className="mt-6 space-y-3">
+              <div className="flex items-center justify-between text-xs">
+                <div className="flex items-center gap-3">
+                  <span className="text-white/50 font-mono uppercase tracking-wider">Analyzing Audio</span>
+                  {showChunkInfo && (
+                    <span className="text-[10px] font-bold text-white/30">
+                      CHUNK <span className="text-green-400">{chunkInfo.current}</span>/{chunkInfo.total}
+                    </span>
+                  )}
+                </div>
+                <span className="text-green-400 font-bold tabular-nums">{analysisProgress}%</span>
+              </div>
+              <div className="relative w-full h-2 bg-white/5 rounded-full overflow-hidden border border-white/10">
+                <div
+                  className="absolute inset-0 bg-gradient-to-r from-green-400 via-emerald-500 to-teal-500 transition-all duration-300 ease-out"
+                  style={{ width: `${analysisProgress}%` }}
+                />
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-[shimmer_2s_infinite]" />
+              </div>
+            </div>
+          )}
 
           <div className="mt-10">
             <div className="flex items-end gap-2 h-10">
               {Array.from({ length: 14 }).map((_, i) => (
                 <div
-                  // eslint-disable-next-line react/no-array-index-key
                   key={i}
                   className="w-[10px] sm:w-3 rounded-full bg-gradient-to-t from-blue-500/20 via-cyan-400/30 to-purple-500/20 animate-[an_bar_1.1s_ease-in-out_infinite]"
                   style={{
@@ -422,6 +532,10 @@ function BusyOverlay({
 export default function App(): JSX.Element {
   const [busy, setBusy] = React.useState<Busy>("idle");
   const [transcript, setTranscript] = React.useState<string>("");
+  const [uploadProgress, setUploadProgress] = React.useState<number>(0);
+  const [analysisProgress, setAnalysisProgress] = React.useState<number>(0);
+  const [showSuccessNotif, setShowSuccessNotif] = React.useState<boolean>(false);
+  const [chunkInfo, setChunkInfo] = React.useState<ChunkInfo | null>(null);
 
   const [document_type, setDocumentType] = React.useState<string>(
     "Executive Meeting Minutes",
@@ -470,6 +584,18 @@ export default function App(): JSX.Element {
         0%   { transform: scaleY(0.55); opacity: 0.55; }
         50%  { transform: scaleY(1.25); opacity: 1; }
         100% { transform: scaleY(0.65); opacity: 0.65; }
+      }
+      @keyframes shimmer {
+        0%   { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
+      }
+      @keyframes slideIn {
+        0%   { transform: translateX(100%); opacity: 0; }
+        100% { transform: translateX(0); opacity: 1; }
+      }
+      @keyframes shrink {
+        0%   { width: 100%; }
+        100% { width: 0%; }
       }
     `;
     document.head.appendChild(style);
@@ -557,18 +683,160 @@ export default function App(): JSX.Element {
     setExtraNotes("");
   }, [preset_id]);
 
+  /**
+   * Split audio file into chunks for better handling of large files
+   * Optimized for very large files (8+ hours)
+   */
+  async function split_audio_into_chunks(
+    file: File,
+    chunkSizeMB: number = 15
+  ): Promise<File[]> {
+    const chunkSize = chunkSizeMB * 1024 * 1024;
+    
+    // If file is small enough, return as-is
+    if (file.size <= chunkSize) {
+      return [file];
+    }
+
+    const chunks: File[] = [];
+    let offset = 0;
+    let chunkIndex = 0;
+
+    while (offset < file.size) {
+      const end = Math.min(offset + chunkSize, file.size);
+      const blob = file.slice(offset, end, file.type);
+      const extension = file.name.split('.').pop() || 'webm';
+      const chunkFile = new File(
+        [blob],
+        `${file.name.replace(/\.[^/.]+$/, '')}_chunk${chunkIndex}.${extension}`,
+        { type: file.type }
+      );
+      chunks.push(chunkFile);
+      offset = end;
+      chunkIndex++;
+    }
+
+    return chunks;
+  }
+
   async function stt_from_file(file: File): Promise<string> {
-    const form = new FormData();
-    form.append("audio", file);
+    // Reset progress
+    setUploadProgress(0);
+    setAnalysisProgress(0);
+    
+    // Split file into chunks (15MB each for better performance)
+    const chunks = await split_audio_into_chunks(file, 15);
+    const totalChunks = chunks.length;
+    
+    // Set chunk info if multiple chunks
+    if (totalChunks > 1) {
+      setChunkInfo({ current: 1, total: totalChunks });
+    }
+    
+    let fullTranscript = "";
 
-    const r = await fetch(`${API_BASE}/api/stt`, {
-      method: "POST",
-      body: form,
-    });
+    for (let i = 0; i < totalChunks; i++) {
+      const chunk = chunks[i];
+      
+      // Update chunk info
+      if (totalChunks > 1) {
+        setChunkInfo({ current: i + 1, total: totalChunks });
+      }
+      
+      // Phase 1: UPLOADING with REAL-TIME progress
+      setBusy("uploading");
+      setAnalysisProgress(0);
+      
+      const form = new FormData();
+      form.append("audio", chunk);
 
-    const data = await r.json().catch(() => ({}));
-    if (!r.ok) throw new Error(data?.error || data?.message || "STT failed");
-    return String(data?.text || "");
+      // Use XMLHttpRequest for REAL upload progress tracking
+      const uploadPromise = new Promise<Response>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        
+        // REAL-TIME upload progress
+        xhr.upload.addEventListener('progress', (e) => {
+          if (e.lengthComputable) {
+            const chunkProgress = (e.loaded / e.total) * 100;
+            const overallProgress = ((i + (e.loaded / e.total)) / totalChunks) * 100;
+            setUploadProgress(Math.round(overallProgress));
+          }
+        });
+        
+        xhr.addEventListener('load', () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            // Create a Response-like object
+            const response = new Response(xhr.responseText, {
+              status: xhr.status,
+              statusText: xhr.statusText,
+              headers: new Headers({
+                'Content-Type': xhr.getResponseHeader('Content-Type') || 'application/json'
+              })
+            });
+            resolve(response);
+          } else {
+            reject(new Error(`HTTP ${xhr.status}: ${xhr.statusText}`));
+          }
+        });
+        
+        xhr.addEventListener('error', () => {
+          reject(new Error('Network error during upload'));
+        });
+        
+        xhr.addEventListener('abort', () => {
+          reject(new Error('Upload aborted'));
+        });
+        
+        xhr.open('POST', `${API_BASE}/api/stt`);
+        xhr.send(form);
+      });
+
+      // Phase 2: ANALYZING
+      setBusy("analyzing");
+      
+      // Smooth analysis progress animation (this part can stay simulated)
+      let currentAnalysis = 0;
+      const analysisInterval = setInterval(() => {
+        if (currentAnalysis < 85) {
+          currentAnalysis = Math.min(currentAnalysis + 5, 85);
+          setAnalysisProgress(currentAnalysis);
+        }
+      }, 200);
+
+      try {
+        const r = await uploadPromise;
+        
+        // Clear analysis interval
+        clearInterval(analysisInterval);
+        
+        // Complete upload progress for this chunk
+        const finalUploadProgress = Math.round(((i + 1) / totalChunks) * 100);
+        setUploadProgress(finalUploadProgress);
+
+        const data = await r.json().catch(() => ({}));
+        
+        if (!r.ok) {
+          throw new Error(data?.error || data?.message || "STT failed");
+        }
+        
+        const chunkText = String(data?.text || "");
+        fullTranscript += (fullTranscript ? " " : "") + chunkText;
+        
+        // Complete analysis
+        setAnalysisProgress(100);
+        
+        // Small delay before next chunk
+        await new Promise(resolve => setTimeout(resolve, 300));
+      } catch (error) {
+        clearInterval(analysisInterval);
+        throw error;
+      }
+    }
+
+    // Clear chunk info when done
+    setChunkInfo(null);
+    
+    return fullTranscript;
   }
 
   /**
@@ -600,12 +868,21 @@ export default function App(): JSX.Element {
 
   async function on_upload(file: File): Promise<void> {
     setBusy("uploading");
+    setUploadProgress(0);
+    setAnalysisProgress(0);
+    setChunkInfo(null);
     try {
       const text = await stt_from_file(file);
       setTranscript(text);
       setGeneratedMd("");
+      
+      // Show success notification
+      setShowSuccessNotif(true);
     } finally {
       setBusy("idle");
+      setUploadProgress(0);
+      setAnalysisProgress(0);
+      setChunkInfo(null);
     }
   }
 
@@ -636,6 +913,8 @@ export default function App(): JSX.Element {
     recorder.onstop = async () => {
       try {
         setBusy("uploading");
+        setUploadProgress(0);
+        setAnalysisProgress(0);
 
         const blob = new Blob(chunksRef.current, {
           type: recorder.mimeType || "audio/webm",
@@ -645,10 +924,15 @@ export default function App(): JSX.Element {
         const text = await stt_from_file(file);
         setTranscript(text);
         setGeneratedMd("");
+        
+        // Show success notification
+        setShowSuccessNotif(true);
       } catch (e: any) {
         alert(e?.message ?? "Recording failed");
       } finally {
         setBusy("idle");
+        setUploadProgress(0);
+        setAnalysisProgress(0);
         const s = streamRef.current;
         if (s) s.getTracks().forEach((t) => t.stop());
         streamRef.current = null;
@@ -733,7 +1017,7 @@ export default function App(): JSX.Element {
     }
   }
 
-  const overlay_open = busy === "uploading" || busy === "generating";
+  const overlay_open = busy === "uploading" || busy === "analyzing" || busy === "generating";
   const overlay_title = busy_label(busy);
   const overlay_subtitle =
     busy === "uploading"
@@ -744,10 +1028,18 @@ export default function App(): JSX.Element {
 
   return (
     <div className="min-h-screen text-white relative overflow-hidden">
+      <SuccessNotification
+        show={showSuccessNotif}
+        onClose={() => setShowSuccessNotif(false)}
+      />
+      
       <BusyOverlay
         open={overlay_open}
         title={overlay_title}
         subtitle={overlay_subtitle}
+        uploadProgress={busy === "uploading" || busy === "analyzing" ? uploadProgress : undefined}
+        analysisProgress={busy === "analyzing" ? analysisProgress : undefined}
+        chunkInfo={chunkInfo}
       />
 
       <div className="fixed inset-0 -z-10">
